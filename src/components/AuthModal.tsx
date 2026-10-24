@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { X, Mail, Lock, User, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Copy,
+  Check,
+  ExternalLink,
+  ShieldAlert,
+} from 'lucide-react';
 import {
   loginWithGoogle,
   loginWithEmail,
@@ -8,7 +20,17 @@ import {
 } from '../services/firebaseAuth';
 import { User as FirebaseUser } from 'firebase/auth';
 
-export type AuthMode = 'login' | 'signup' | 'forgot';
+export type AuthMode = 'login' | 'signup' | 'forgot' | 'google';
+
+interface DetailedAuthError {
+  code: string;
+  title: string;
+  message: string;
+  type: 'unauthorized-domain' | 'operation-not-allowed' | 'popup-blocked' | 'popup-closed' | 'general';
+  domain?: string;
+  actionUrl?: string;
+  actionText?: string;
+}
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,19 +45,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'login',
   onSuccess,
 }) => {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode === 'google' ? 'login' : initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailedError, setDetailedError] = useState<DetailedAuthError | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const resetForm = () => {
     setError(null);
+    setDetailedError(null);
     setSuccessMessage(null);
   };
 
@@ -44,23 +67,89 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setMode(newMode);
   };
 
+  const handleCopyDomain = (domainToCopy: string) => {
+    try {
+      navigator.clipboard.writeText(domainToCopy);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2500);
+    } catch {
+      // fallback
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    setDetailedError(null);
     try {
       const user = await loginWithGoogle();
       if (onSuccess) onSuccess(user);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Google sign in failed. Please try again.');
+      const code = err.code || '';
+      const rawMsg = err.message || '';
+      const currentDomain = window.location.hostname;
+
+      if (code === 'auth/unauthorized-domain' || rawMsg.includes('unauthorized-domain')) {
+        setDetailedError({
+          code: 'auth/unauthorized-domain',
+          title: 'Firebase Domain Authorization Required',
+          message: `Google Sign-In काम करने के लिए इस Domain (${currentDomain}) को आपके Firebase Console के "Authorized Domains" में जोड़ना होगा।`,
+          type: 'unauthorized-domain',
+          domain: currentDomain,
+          actionUrl: 'https://console.firebase.google.com/project/yaarokayaarstream/authentication/settings',
+          actionText: 'Open Firebase Settings: Authorized Domains',
+        });
+      } else if (code === 'auth/operation-not-allowed' || rawMsg.includes('operation-not-allowed')) {
+        setDetailedError({
+          code: 'auth/operation-not-allowed',
+          title: 'Google Sign-In Provider Disabled',
+          message: 'Firebase Console में Google Sign-In Provider को Enable (चालू) करना होगा।',
+          type: 'operation-not-allowed',
+          actionUrl: 'https://console.firebase.google.com/project/yaarokayaarstream/authentication/providers',
+          actionText: 'Open Firebase: Enable Google Provider',
+        });
+      } else if (code === 'auth/popup-blocked' || rawMsg.includes('popup-blocked')) {
+        setDetailedError({
+          code: 'auth/popup-blocked',
+          title: 'Browser Popup Blocked',
+          message: 'ब्राउज़र ने Google Sign-In पॉपअप विंडो रोक दी है। कृपया Address Bar से Pop-ups को Allow करें।',
+          type: 'popup-blocked',
+        });
+      } else if (code === 'auth/popup-closed-by-user' || rawMsg.includes('popup-closed')) {
+        setDetailedError({
+          code: 'auth/popup-closed-by-user',
+          title: 'Sign-in Cancelled',
+          message: 'गूगल लॉगिन विंडो पूरी होने से पहले बंद कर दी गई थी। कृपया पुनः प्रयास करें।',
+          type: 'popup-closed',
+        });
+      } else {
+        const cleanMsg = rawMsg.replace(/^Firebase:\s*/i, '').replace(/\(auth\/[^)]+\)\.?/i, '').trim();
+        setError(cleanMsg || 'Google sign in failed. Please try again or use Email Login below.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Auto-trigger Google sign-in if opened with 'google' mode
+  useEffect(() => {
+    if (isOpen) {
+      if (initialMode === 'google') {
+        setMode('login');
+        handleGoogleSignIn();
+      } else {
+        setMode(initialMode);
+      }
+    } else {
+      resetForm();
+    }
+  }, [isOpen, initialMode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setDetailedError(null);
     setSuccessMessage(null);
 
     if (mode === 'signup' && password !== confirmPassword) {
@@ -102,6 +191,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
@@ -135,8 +226,76 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Content Body */}
         <div className="p-5 sm:p-6 space-y-4">
-          {/* Error Message */}
-          {error && (
+          {/* Detailed Diagnostic Error Box for Google Sign-In issues */}
+          {detailedError && (
+            <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 text-slate-800 text-xs space-y-2.5 animate-in fade-in shadow-xs">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-extrabold text-amber-950 text-xs flex items-center justify-between">
+                    <span>{detailedError.title}</span>
+                    <span className="text-[10px] bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded font-mono">
+                      {detailedError.code}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-900 mt-1 leading-relaxed">
+                    {detailedError.message}
+                  </p>
+                </div>
+              </div>
+
+              {detailedError.domain && (
+                <div className="p-2 bg-white rounded-lg border border-amber-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                    <span>Domain to Authorize:</span>
+                    {copiedDomain && (
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Copied!
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <code className="flex-1 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[11px] font-mono text-slate-800 select-all truncate">
+                      {detailedError.domain}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyDomain(detailedError.domain!)}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95"
+                    >
+                      {copiedDomain ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedDomain ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {detailedError.actionUrl && (
+                <div className="space-y-1 pt-1">
+                  <a
+                    href={detailedError.actionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-lg shadow-2xs transition-colors"
+                  >
+                    <span>{detailedError.actionText || 'Open Firebase Settings'}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <p className="text-[10px] text-amber-900/90 text-center">
+                    Firebase Console → <strong>Authorized domains</strong> में डोमेन Add करें।
+                  </p>
+                </div>
+              )}
+
+              <div className="text-[10px] text-slate-600 pt-1.5 border-t border-amber-200/80 flex items-center gap-1">
+                <span className="font-bold text-amber-900">💡 Alternately:</span>
+                <span>नीचे दिए <strong>Email & Password</strong> से अभी तुरंत Sign Up या Login करें!</span>
+              </div>
+            </div>
+          )}
+
+          {/* Standard Error Message */}
+          {error && !detailedError && (
             <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{error}</span>

@@ -45,7 +45,7 @@ interface HeaderProps {
   onOpenVerifier: () => void;
   onOpenFeedback?: () => void;
   authUser?: any;
-  onOpenAuth?: (mode?: 'login' | 'signup' | 'forgot') => void;
+  onOpenAuth?: (mode?: 'login' | 'signup' | 'forgot' | 'google') => void;
   onSignOutAuth?: () => void;
 }
 
@@ -331,7 +331,7 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => {
                       setIsMenuOpen(false);
-                      if (onOpenAuth) onOpenAuth('login');
+                      if (onOpenAuth) onOpenAuth('google');
                     }}
                     className="w-full py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-[0.98]"
                   >

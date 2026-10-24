@@ -1,6 +1,4 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
@@ -11,20 +9,10 @@ import {
   updateProfile,
   User,
 } from 'firebase/auth';
+import { auth, firebaseConfig } from '../firebase';
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyAyMC9sP21yM9mwleI_qxiKhQIKukhCKJ4',
-  authDomain: 'yaarokayaarstream.firebaseapp.com',
-  projectId: 'yaarokayaarstream',
-  storageBucket: 'yaarokayaarstream.firebasestorage.app',
-  messagingSenderId: '478699512400',
-  appId: '1:478699512400:web:6e7173dc17a0ef86cf6755',
-  measurementId: 'G-YNTJV9K1B6',
-};
+export { auth, firebaseConfig };
 
-// Initialize or reuse Firebase app
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 

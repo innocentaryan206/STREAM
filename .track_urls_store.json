@@ -1,0 +1,53 @@
+[
+  {
+    "id": "trk_1792403468227_8zk6g",
+    "slug": "sports-hd",
+    "name": "Sports Superpack HD",
+    "m3uContent": "#EXTM3U\n#EXTINF:-1 tvg-name=\"Cricket 1 HD\",Cricket 1 HD\nhttps://wiselp.wiseplayout.com/9X_Jalwa/master.m3u8\n#EXTINF:-1 tvg-name=\"Action Sports\",Action Sports Live\nhttps://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "channelCount": 2,
+    "validityType": "permanent",
+    "durationHours": null,
+    "expiresAt": null,
+    "createdAt": 1792403468227,
+    "isDeleted": false,
+    "totalClicks": 4,
+    "clicks": [
+      {
+        "id": "clk_1792403480523_wft8",
+        "timestamp": 1792403480522,
+        "ip": "127.0.0.1",
+        "userAgent": "TiviMate/4.7.0 (Android TV)",
+        "deviceType": "Smart TV / STB",
+        "clientName": "TiviMate IPTV",
+        "os": "Android TV / Fire OS"
+      },
+      {
+        "id": "clk_1792403480549_4l7z",
+        "timestamp": 1792403480549,
+        "ip": "127.0.0.1",
+        "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+        "deviceType": "Mobile",
+        "clientName": "Apple Safari",
+        "os": "Apple iOS (iPhone)"
+      },
+      {
+        "id": "clk_1792403480571_3bzd",
+        "timestamp": 1792403480571,
+        "ip": "127.0.0.1",
+        "userAgent": "VLC/3.0.18 LibVLC/3.0.18",
+        "deviceType": "IPTV App",
+        "clientName": "VLC Media Player",
+        "os": "Unknown OS"
+      },
+      {
+        "id": "clk_1792403480596_jw3x",
+        "timestamp": 1792403480596,
+        "ip": "127.0.0.1",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+        "deviceType": "Desktop",
+        "clientName": "Google Chrome",
+        "os": "Microsoft Windows"
+      }
+    ]
+  }
+]

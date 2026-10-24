@@ -1,0 +1,77 @@
+import { StreamChannel, Category } from '../types';
+
+export interface MacAuthResponse {
+  success: boolean;
+  macAddress: string;
+  portalUrl: string;
+  authenticated: boolean;
+  authMethod: string;
+  totalChannels: number;
+  totalCategories: number;
+  categories: Category[];
+  channels: StreamChannel[];
+  m3uContent: string;
+  downloadFilename: string;
+  message?: string;
+}
+
+/**
+ * Authenticates with Stalker / MAG / Xtream Portal server using MAC address & Portal URL
+ * and fetches the complete channel list with stream URLs, names, and groups.
+ */
+export async function authenticateMacPortal(
+  macAddress: string,
+  portalUrl: string,
+  allowDemoFallback: boolean = false
+): Promise<MacAuthResponse> {
+  const controller = new AbortController();
+  // Extended timeout to 90 seconds to allow large M3U playlists to load completely
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const response = await fetch('/api/mac-portal/authenticate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        macAddress: macAddress.trim(),
+        portalUrl: portalUrl.trim(),
+        allowDemoFallback,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'MAC Portal authentication failed. Please verify the MAC Address and Portal URL.');
+    }
+
+    return data;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error(
+        `Connection timed out after 90s. The IPTV server at "${portalUrl}" took too long to return the playlist. Please verify that the server is online or check your network connection.`
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * Triggers direct browser download of the generated M3U playlist file
+ */
+export function downloadM3uFile(m3uContent: string, filename: string = 'playlist.m3u'): void {
+  const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
